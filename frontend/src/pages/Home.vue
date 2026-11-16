@@ -29,9 +29,11 @@ onMounted(async () => {
   <div v-if="dash" class="grid">
     <div class="stat"><div class="label">业务钟</div><div class="value" style="font-size:1rem">{{ dash.business_clock }}</div></div>
     <div class="stat"><div class="label">商品</div><div class="value">{{ dash.sku_count }}</div></div>
+    <div class="stat"><div class="label">停用商品</div><div class="value">{{ dash.disabled_sku_count }}</div></div>
     <div class="stat"><div class="label">改价单</div><div class="value">{{ dash.ticket_count }}</div></div>
     <div class="stat"><div class="label">待生效</div><div class="value">{{ dash.scheduled_count }}</div></div>
     <div class="stat"><div class="label">已应用</div><div class="value">{{ dash.applied_count }}</div></div>
     <div class="stat"><div class="label">到期待应用</div><div class="value">{{ dash.due_now }}</div></div>
   </div>
+  <p v-if="dash" class="msg">停用商品策略：<strong>{{ dash.disabled_sku_policy_label }}</strong>（全局唯一）</p>
 </template>

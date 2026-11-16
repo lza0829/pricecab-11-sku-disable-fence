@@ -67,7 +67,13 @@ def get_ticket(conn: sqlite3.Connection, ticket_id: int) -> dict[str, Any] | Non
 
 def list_lines(conn: sqlite3.Connection, ticket_id: int) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT * FROM price_ticket_lines WHERE ticket_id=? ORDER BY id",
+        '''
+        SELECT l.*, s.enabled AS sku_enabled
+        FROM price_ticket_lines l
+        LEFT JOIN skus s ON s.sku_code = l.sku_code
+        WHERE l.ticket_id=?
+        ORDER BY l.id
+        ''',
         (ticket_id,),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -85,6 +91,20 @@ def due_tickets(conn: sqlite3.Connection, clock_at: str) -> list[dict[str, Any]]
     return [dict(r) for r in rows]
 
 
+def scheduled_ticket_nos_with_sku(conn: sqlite3.Connection, sku_code: str) -> list[str]:
+    rows = conn.execute(
+        '''
+        SELECT DISTINCT t.ticket_no
+        FROM price_tickets t
+        JOIN price_ticket_lines l ON l.ticket_id = t.id
+        WHERE t.status='scheduled' AND l.sku_code=?
+        ORDER BY t.ticket_no
+        ''',
+        (sku_code,),
+    ).fetchall()
+    return [r["ticket_no"] for r in rows]
+
+
 def mark_applied(
     conn: sqlite3.Connection,
     ticket_id: int,
@@ -99,4 +119,23 @@ def mark_applied(
         WHERE id=?
         ''',
         (applied_at, batch_id, ticket_id),
+    )
+
+
+def mark_rejected(
+    conn: sqlite3.Connection,
+    ticket_id: int,
+    *,
+    rejected_at: str,
+    batch_id: int,
+    reason: str,
+) -> None:
+    """Reject a whole ticket; status leaves ``scheduled`` so it is never retried."""
+    conn.execute(
+        '''
+        UPDATE price_tickets
+        SET status='rejected', rejected_at=?, reject_reason=?, apply_batch_id=?
+        WHERE id=?
+        ''',
+        (rejected_at, reason, batch_id, ticket_id),
     )

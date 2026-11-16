@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.db import connect
+from app.policies import describe_current
 from app.repositories import settings as settings_repo
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -11,5 +12,14 @@ def list_settings():
     conn = connect()
     try:
         return settings_repo.list_all(conn)
+    finally:
+        conn.close()
+
+
+@router.get("/policy")
+def disabled_sku_policy():
+    conn = connect()
+    try:
+        return describe_current(conn)
     finally:
         conn.close()

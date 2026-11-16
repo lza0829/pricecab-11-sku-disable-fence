@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.db import connect
+from app.policies import POLICY_REJECT, get_policy
 from app.repositories import skus as sku_repo
 from app.repositories import tickets as ticket_repo
 
@@ -46,8 +47,11 @@ def create_ticket(body: dict[str, Any]) -> dict[str, Any]:
     if not lines:
         raise HTTPException(400, "至少一行改价明细")
 
+    # BEGIN IMMEDIATE serialises this against an in-flight apply, so the
+    # enabled/disabled state checked below is the same state the apply used.
     conn = connect(immediate=True)
     try:
+        policy = get_policy(conn)
         ticket_no = ticket_repo.next_ticket_no(conn)
         tid = ticket_repo.create_ticket(
             conn,
@@ -65,6 +69,12 @@ def create_ticket(body: dict[str, Any]) -> dict[str, Any]:
             sku = sku_repo.get_by_code(conn, sku_code)
             if not sku:
                 raise HTTPException(400, f"未知商品 {sku_code}")
+            if policy == POLICY_REJECT and not sku["enabled"]:
+                raise HTTPException(
+                    409,
+                    f"商品 {sku_code} 已停用，按「建单即拒」策略不得进入新改价明细；"
+                    "请先启用该商品或移除该行",
+                )
             book = conn.execute(
                 "SELECT current_price FROM price_book WHERE sku_code=?", (sku_code,)
             ).fetchone()

@@ -4,7 +4,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.config import DISABLED_SKU_POLICY
 from app.db import connect
+from app.policies import POLICIES
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -38,7 +40,9 @@ def init_schema(conn) -> None:
           note TEXT,
           created_at TEXT NOT NULL,
           applied_at TEXT,
-          apply_batch_id INTEGER
+          apply_batch_id INTEGER,
+          rejected_at TEXT,
+          reject_reason TEXT
         );
         CREATE TABLE IF NOT EXISTS price_ticket_lines (
           id INTEGER PRIMARY KEY,
@@ -54,7 +58,9 @@ def init_schema(conn) -> None:
           ticket_count INTEGER NOT NULL,
           line_count INTEGER NOT NULL,
           status TEXT NOT NULL,
-          created_at TEXT NOT NULL
+          created_at TEXT NOT NULL,
+          rejected_ticket_count INTEGER NOT NULL DEFAULT 0,
+          skipped_line_count INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS price_book (
           sku_code TEXT PRIMARY KEY,
@@ -87,12 +93,46 @@ def init_schema(conn) -> None:
         );
         '''
     )
+    _migrate(conn)
+
+
+def _migrate(conn) -> None:
+    """Add columns introduced after a database may already have been created."""
+    expected = {
+        "price_tickets": {
+            "rejected_at": "TEXT",
+            "reject_reason": "TEXT",
+        },
+        "apply_batches": {
+            "rejected_ticket_count": "INTEGER NOT NULL DEFAULT 0",
+            "skipped_line_count": "INTEGER NOT NULL DEFAULT 0",
+        },
+    }
+    for table, columns in expected.items():
+        existing = {
+            row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        for name, decl in columns.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
 
 
 def seed_if_empty() -> None:
     conn = connect()
     try:
         init_schema(conn)
+        # The disabled-SKU policy is a single global switch chosen at deploy
+        # time; persist which one this deployment enforces so the UI can show
+        # it and no caller can assume the other. A redeploy with a different
+        # value overwrites it, keeping the whole app on one policy.
+        conn.execute(
+            "INSERT OR REPLACE INTO settings(key, value) VALUES ('disabled_sku_policy', ?)",
+            (DISABLED_SKU_POLICY,),
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO settings(key, value) VALUES ('disabled_sku_policy_label', ?)",
+            (POLICIES[DISABLED_SKU_POLICY]["label"],),
+        )
         n = conn.execute("SELECT COUNT(*) c FROM skus").fetchone()["c"]
         if n:
             conn.commit()

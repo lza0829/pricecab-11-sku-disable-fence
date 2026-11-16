@@ -32,9 +32,13 @@ async function applyDue() {
   result.value = null
   try {
     result.value = await api.applyDue()
-    msg.value = result.value.applied
-      ? `已应用 ${result.value.ticket_count} 张改价单`
-      : result.value.message
+    if (result.value.applied) {
+      msg.value = `已应用 ${result.value.ticket_count} 张改价单`
+    } else if (result.value.rejected_ticket_count) {
+      msg.value = `无改价单写入；整单拒绝 ${result.value.rejected_ticket_count} 张（含停用商品）`
+    } else {
+      msg.value = result.value.message || '没有可应用的改动'
+    }
     await refresh()
   } catch (e) {
     err.value = e.message
@@ -62,6 +66,21 @@ onMounted(() => refresh().catch((e) => (err.value = e.message)))
     </div>
     <p v-if="msg" class="msg ok">{{ msg }}</p>
     <p v-if="err" class="msg err">{{ err }}</p>
+
+    <div v-if="result && result.rejected_tickets && result.rejected_tickets.length" class="notice bad">
+      <strong>整单拒绝（停用商品策略：建单即拒）</strong>
+      <ul>
+        <li v-for="r in result.rejected_tickets" :key="r.ticket_no">
+          {{ r.ticket_no }} — {{ r.reason }}；该单未写入任何价签
+        </li>
+      </ul>
+    </div>
+    <div v-if="result && result.skipped_lines && result.skipped_lines.length" class="notice warn">
+      <strong>跳过停用行（策略：应用跳过）</strong>
+      <ul>
+        <li v-for="(r, i) in result.skipped_lines" :key="i">{{ r.ticket_no }} · {{ r.sku_code }} 未写入价签</li>
+      </ul>
+    </div>
     <pre v-if="result" style="margin-top:12px;font-size:0.82rem;color:var(--muted);white-space:pre-wrap">{{ JSON.stringify(result, null, 2) }}</pre>
   </div>
 
@@ -69,7 +88,7 @@ onMounted(() => refresh().catch((e) => (err.value = e.message)))
     <h2>应用批次</h2>
     <table>
       <thead>
-        <tr><th>批次</th><th>业务钟</th><th>改价单数</th><th>明细行</th><th>状态</th><th>时间</th></tr>
+        <tr><th>批次</th><th>业务钟</th><th>已应用单</th><th>写入行</th><th>拒绝单</th><th>跳过行</th><th>状态</th><th>时间</th></tr>
       </thead>
       <tbody>
         <tr v-for="b in batches" :key="b.id">
@@ -77,6 +96,8 @@ onMounted(() => refresh().catch((e) => (err.value = e.message)))
           <td>{{ b.clock_at }}</td>
           <td>{{ b.ticket_count }}</td>
           <td>{{ b.line_count }}</td>
+          <td>{{ b.rejected_ticket_count }}</td>
+          <td>{{ b.skipped_line_count }}</td>
           <td><span class="tag ok">{{ b.status }}</span></td>
           <td>{{ b.created_at }}</td>
         </tr>

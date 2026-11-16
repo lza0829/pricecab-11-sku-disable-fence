@@ -8,21 +8,33 @@ from app.repositories import prices as price_repo
 
 
 def reconcile_sales() -> dict[str, Any]:
-    """Compare each sale's unit_price with the price book value effective at sold_at."""
+    """Compare each sale's unit_price with the price book value effective at sold_at.
+
+    Sales whose SKU is currently disabled form their own bucket
+    (``disabled_sku``): they are never silently counted as a match, even when
+    the price happens to agree, because the catalog no longer treats that SKU
+    as sellable and the comparison is not meaningful.
+    """
     conn = connect()
     try:
-        sales = sales_repo.list_sales(conn)
+        sales = sales_repo.list_sales_with_sku_state(conn)
         rows = []
         match = 0
         mismatch = 0
         missing = 0
+        disabled = 0
         for s in sales:
             expected = price_repo.price_at(conn, s["sku_code"], s["sold_at"])
             sold = float(s["unit_price"])
-            if expected is None:
+            delta = None if expected is None else round(sold - expected, 4)
+            sku_enabled = s.get("sku_enabled")
+            if sku_enabled is not None and not bool(sku_enabled):
+                # 停用商品成交行：单独分桶，不参与一致/不一致计数。
+                status = "disabled_sku"
+                disabled += 1
+            elif expected is None:
                 status = "missing_price"
                 missing += 1
-                delta = None
             elif abs(expected - sold) < 1e-9:
                 status = "match"
                 match += 1
@@ -30,10 +42,10 @@ def reconcile_sales() -> dict[str, Any]:
             else:
                 status = "mismatch"
                 mismatch += 1
-                delta = round(sold - expected, 4)
             rows.append(
                 {
                     **s,
+                    "sku_enabled": None if sku_enabled is None else bool(sku_enabled),
                     "expected_price": expected,
                     "delta": delta,
                     "status": status,
@@ -44,6 +56,8 @@ def reconcile_sales() -> dict[str, Any]:
             "match_count": match,
             "mismatch_count": mismatch,
             "missing_count": missing,
+            "disabled_sku_count": disabled,
+            "compared_count": len(sales) - disabled,
             "rows": rows,
         }
     finally:

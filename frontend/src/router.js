@@ -4,12 +4,14 @@ import Tickets from './pages/Tickets.vue'
 import Apply from './pages/Apply.vue'
 import PriceBook from './pages/PriceBook.vue'
 import Reconcile from './pages/Reconcile.vue'
+import Catalog from './pages/Catalog.vue'
 
 export default createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: Home },
     { path: '/tickets', component: Tickets },
+    { path: '/catalog', component: Catalog },
     { path: '/apply', component: Apply },
     { path: '/prices', component: PriceBook },
     { path: '/reconcile', component: Reconcile },

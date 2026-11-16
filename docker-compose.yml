@@ -7,6 +7,9 @@ services:
       - pricecab_data:/data
     environment:
       DATA_DIR: /data
+      # 停用商品策略，全局唯一，二选一：
+      #   reject_on_create（默认）建单即拒；skip_on_apply 允许建单、应用时跳过
+      DISABLED_SKU_POLICY: ${DISABLED_SKU_POLICY:-reject_on_create}
   frontend:
     build: ./frontend
     ports:

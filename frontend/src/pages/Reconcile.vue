@@ -18,6 +18,12 @@ function tagClass(status) {
   if (status === 'mismatch') return 'bad'
   return 'muted'
 }
+
+function statusLabel(status) {
+  if (status === 'disabled_sku') return '停用商品（单列）'
+  if (status === 'missing_price') return '缺价'
+  return status
+}
 </script>
 
 <template>
@@ -32,7 +38,12 @@ function tagClass(status) {
     <div class="stat"><div class="label">一致</div><div class="value">{{ data.match_count }}</div></div>
     <div class="stat"><div class="label">不一致</div><div class="value">{{ data.mismatch_count }}</div></div>
     <div class="stat"><div class="label">缺价</div><div class="value">{{ data.missing_count }}</div></div>
+    <div class="stat"><div class="label">停用商品行</div><div class="value">{{ data.disabled_sku_count }}</div></div>
   </div>
+
+  <p v-if="data && data.disabled_sku_count" class="msg">
+    停用商品的成交行单独分桶，不计入一致 / 不一致，也不当作一致；共 {{ data.disabled_sku_count }} 行。
+  </p>
 
   <div v-if="data" class="panel">
     <h2>明细</h2>
@@ -51,7 +62,7 @@ function tagClass(status) {
           <td>{{ r.unit_price }}</td>
           <td>{{ r.expected_price ?? '—' }}</td>
           <td>{{ r.delta ?? '—' }}</td>
-          <td><span class="tag" :class="tagClass(r.status)">{{ r.status }}</span></td>
+          <td><span class="tag" :class="tagClass(r.status)">{{ statusLabel(r.status) }}</span></td>
         </tr>
       </tbody>
     </table>

@@ -27,7 +27,7 @@ onMounted(async () => {
     <h2>价签本</h2>
     <table>
       <thead>
-        <tr><th>SKU</th><th>品名</th><th>分类</th><th>现行价</th><th>来源单</th><th>生效时刻</th><th>更新</th></tr>
+        <tr><th>SKU</th><th>品名</th><th>分类</th><th>现行价</th><th>来源单</th><th>生效时刻</th><th>更新</th><th>商品状态</th></tr>
       </thead>
       <tbody>
         <tr v-for="r in book" :key="r.sku_code">
@@ -38,6 +38,9 @@ onMounted(async () => {
           <td>{{ r.source_ticket_no || '初始' }}</td>
           <td>{{ r.effective_at }}</td>
           <td>{{ r.updated_at }}</td>
+          <td>
+            <span class="tag" :class="r.sku_enabled ? 'ok' : 'bad'">{{ r.sku_enabled ? '启用' : '停用' }}</span>
+          </td>
         </tr>
       </tbody>
     </table>

@@ -7,7 +7,7 @@ from typing import Any
 def list_book(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = conn.execute(
         '''
-        SELECT b.*, s.title, s.category
+        SELECT b.*, s.title, s.category, s.enabled AS sku_enabled
         FROM price_book b
         JOIN skus s ON s.sku_code = b.sku_code
         ORDER BY b.sku_code

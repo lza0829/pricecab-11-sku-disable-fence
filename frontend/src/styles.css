@@ -235,6 +235,22 @@ tbody tr:hover td {
 }
 .msg.err { color: var(--danger); }
 .msg.ok { color: var(--ok); }
+.msg.warn-text { color: var(--warn); }
+
+.notice {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--line);
+  background: color-mix(in srgb, var(--bg-2) 80%, transparent);
+  font-size: 0.88rem;
+}
+.notice.bad { border-left-color: var(--danger); }
+.notice.warn { border-left-color: var(--warn); }
+.notice ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.notice strong { color: var(--ink); }
+
+tr.disabled td { color: var(--muted); }
+.policy code { margin-left: 8px; color: var(--accent-2); }
 
 .chain {
   display: flex;

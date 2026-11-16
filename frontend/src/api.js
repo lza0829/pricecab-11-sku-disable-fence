@@ -19,6 +19,13 @@ export const api = {
   health: () => request('/api/health'),
   dashboard: () => request('/api/dashboard'),
   skus: () => request('/api/skus'),
+  sku: (code) => request(`/api/skus/${encodeURIComponent(code)}`),
+  setSkuEnabled: (code, enabled) =>
+    request(`/api/skus/${encodeURIComponent(code)}/enabled`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
+    }),
+  policy: () => request('/api/settings/policy'),
   tickets: () => request('/api/tickets'),
   ticket: (id) => request(`/api/tickets/${id}`),
   createTicket: (body) => request('/api/tickets', { method: 'POST', body: JSON.stringify(body) }),
